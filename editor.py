@@ -6,8 +6,8 @@ import tkMessageBox
 import types
 import struct
 import marshal
-import custom_dis as dis
 import time
+
 from Tkinter import *
 from ttk import *
 from ScrolledText import *
@@ -20,8 +20,9 @@ class Application:
     const_frame = None
     info_frame = None
     code_frame = None
-    code_list = []
     current_code = None
+    tree = None
+    tree_binding = {}
 
     allowed_types = ("Compiled python file", "*.pyc"),
 
@@ -73,10 +74,10 @@ class Application:
             self.lnotab = lnotab
 
         def get_codes(self):
-            codes = [self.code, ]
+            codes = {self: []}
             for c in self.consts:
-                if type(c) == types.CodeType:
-                    codes.append(c.get_codes())
+                if isinstance(c, self.__class__):
+                    codes[self].append(c.get_codes())
             return codes
 
         def __str__(self):
@@ -141,35 +142,53 @@ class Application:
         def initUI(self):
             self.pack(fill=BOTH, expand=True)
 
-            self.columnconfigure(1, weight=7)
+            self.columnconfigure(1, weight=1)
+            self.columnconfigure(2, weight=7)
             self.columnconfigure(3, pad=2, weight=1)
-            self.rowconfigure(1, weight=1)
-            self.rowconfigure(2, weight=1)
+            self.rowconfigure(1, weight=5)
+            self.rowconfigure(2, weight=5)
 
             Application.prepere_interface(self, Application.current_code)
 
+    @staticmethod
+    def _iter_tree(code_tree, parent=""):
+        for x, y in code_tree.iteritems():
+            new_parent = Application.tree.insert(parent, "end", str(x), text=x.name)
+            Application.tree_binding[new_parent] = x
+            for z in y:
+                Application._iter_tree(z, new_parent)
+
+    @staticmethod
+    def tree_select(event):
+        Application.prepere_interface(Application.frame, Application.tree_binding[Application.tree.selection()[0]])
+
     @classmethod
     def prepere_interface(cls, frame, code):
+        
         if code:
-            Application.current_code = code
 
-            for code in Application.code_list:
-                code_button = Label(frame, text=code.name, command=lambda: prepere_interface(frame, code))
-                code_button.grid(sticky=W, pady=2, padx=5)
+            cls.tree = Treeview(frame)
+            ysb = Scrollbar(orient=VERTICAL, command=cls.tree.yview)
+            xsb = Scrollbar(orient=HORIZONTAL, command=cls.tree.xview)
+            cls.tree['yscroll'] = ysb.set
+            cls.tree['xscroll'] = xsb.set
+            cls.tree.bind('<<TreeviewSelect>>', cls.tree_select)
+            cls._iter_tree(cls.decompilat.get_codes())
+            cls.current_code = code
 
-            Application.code_frame = ScrolledText(frame)
-            Application.code_frame.grid(row=1, column=0, columnspan=2, rowspan=4,
-                                        padx=1, sticky=E + W + S + N)
-            Application.print_code()
+            cls.tree.grid(column=0, row=1, rowspan=2, sticky=E + W + S + N, pady=2, padx=5)
 
-            Application.info_frame = Listbox(frame)
-            Application.info_frame.grid(row=1, column=3, pady=2, padx=2, sticky=E + W + S + N)
-            Application.print_info()
+            cls.code_frame = ScrolledText(frame)
+            cls.code_frame.grid(row=1, column=1, rowspan=2, padx=1, sticky=E + W + S + N)
+            cls.print_code()
 
-            Application.const_frame = Listbox(frame)
-            Application.const_frame.grid(row=2, column=3, pady=2, padx=2, sticky=E + W + S + N)
-            Application.print_consts()
+            cls.info_frame = Listbox(frame)
+            cls.info_frame.grid(row=1, column=2, pady=2, padx=2, sticky=E + W + S + N)
+            cls.print_info()
 
+            cls.const_frame = Listbox(frame)
+            cls.const_frame.grid(row=2, column=2, pady=2, padx=2, sticky=E + W + S + N)
+            cls.print_consts()
 
     @staticmethod
     def print_code():
