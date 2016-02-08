@@ -7,7 +7,7 @@ import types
 import struct
 import marshal
 import time
-
+import custom_dis as dis
 from Tkinter import *
 from ttk import *
 from ScrolledText import *
@@ -164,14 +164,9 @@ class Application:
 
     @classmethod
     def prepere_interface(cls, frame, code):
-        
-        if code:
 
+        if code:
             cls.tree = Treeview(frame)
-            ysb = Scrollbar(orient=VERTICAL, command=cls.tree.yview)
-            xsb = Scrollbar(orient=HORIZONTAL, command=cls.tree.xview)
-            cls.tree['yscroll'] = ysb.set
-            cls.tree['xscroll'] = xsb.set
             cls.tree.bind('<<TreeviewSelect>>', cls.tree_select)
             cls._iter_tree(cls.decompilat.get_codes())
             cls.current_code = code
@@ -192,7 +187,7 @@ class Application:
 
     @staticmethod
     def print_code():
-        Application.code_frame.insert('1.0', Application.current_code.show_hex())
+        Application.code_frame.insert('1.0', "".join(dis.dis(Application.current_code.show_hex())))
 
     @staticmethod
     def print_info():
